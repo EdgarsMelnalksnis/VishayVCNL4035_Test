@@ -23,7 +23,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "time.h"
 
+#define BIT(n) 1u<<n
+#define BITL(b)	BIT(b)
+#define BITH(b)	BIT(8 + b)
+
+#define DEV_ADDR 0x60
+
+
+static void i2c_dump_reg(int);
+static void i2c_regset(int,uint8_t,uint16_t,uint16_t);
+void ms_delay(uint32_t);
 static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command,
                                      int size, union i2c_smbus_data *data)
 {
@@ -51,9 +62,46 @@ static inline __s32 i2c_smbus_read_word_data(int file, __u8 command)
 }
 }
 
+
+static inline int i2c_smbus_write_word_data(int file, __u8 command,uint16_t value)
+{
+	union i2c_smbus_data data;
+	uint16_t i2c_data;
+	data.word=value;
+	if (i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
+	                     I2C_SMBUS_WORD_DATA,&data))
+		{
+			return -1;
+		}
+		else 
+		return 0;
+}
+
+
+enum vcnl4035_regs {
+	ALS_CONF = 0,	// 0x0
+	ALS_THDH,	// 0x1
+	ALS_THDL,	// 0x2
+	PS_CONF,	// 0x3
+	PS_CONF_MS,	// 0x4
+	PS_CANC,	// 0x5
+	PS_THDL,	// 0x6
+	PS_THDH,	// 0x7
+	PS1_DATA,	// 0x8
+	PS2_DATA,	// 0x9
+	PS3_DATA,	// 0xa
+	ALS_DATA,	// 0xb
+	WHITE_DATA,	// 0xc
+	INT_FLAG,	// 0xd
+	ID,		// 0xe
+};
+
+
+
+
 int main()
 {
-	uint8_t  addr = 0x60, reg[0xf] ={0};// 0xe;
+	uint8_t  addr = DEV_ADDR, reg[0xf] ={0};// 0xe;
 	uint16_t data=0;
 	const char *path = "/dev/i2c-1";
 	int file, rc;
@@ -68,10 +116,62 @@ int main()
 	if (rc < 0)
 		err(errno, "Tried to set device address '0x%02x'", addr);
 
-for(int i =0; i<0xf;i++)
+	
+	i2c_regset(file,PS_CONF,BIT(14) | BIT(15) ,0);
+	
+i2c_regset(file,PS_CONF_MS,BIT(0) | BIT(3) ,0);
+
+	
+			i2c_regset(file, PS_CONF,(4 << 1) | (1 << 6) | (2 << 8) 
+			| BITH(2) | BITH(3) | BITH(6) ,0);
+			
+	
+	i2c_regset(file,ALS_CONF,(2 << 5) ,0);
+	
+	i2c_regset(file,PS_THDL,0x1ff,0);
+	i2c_dump_reg(file);
+
+
+while(1)
 {
 	
-	printf("%02x:0x%04x\n",i,i2c_smbus_read_word_data(file,i));
+	printf("%d\n",i2c_smbus_read_word_data(file,PS1_DATA));
+	i2c_regset(file,PS_CONF_MS, BIT(2), 0);
+	ms_delay(1000);
+	
 }
 
+
+
+}
+
+static void i2c_dump_reg(int i2c_file)
+{
+	for(int i =0; i<0xf;i++)
+{
+	
+	printf("%02x:0x%04x\n",i,i2c_smbus_read_word_data(i2c_file,i));
+}
+}
+
+static void i2c_regset(int file,uint8_t addr, uint16_t set, uint16_t clear) {
+	uint16_t reg_val, new_val;
+	reg_val = i2c_smbus_read_word_data(file,addr);//i2c.read(&i2c, addr);
+	new_val = reg_val;
+	new_val &= ~clear;
+	new_val |= set;
+	if (reg_val != new_val) 
+		i2c_smbus_write_word_data(file,addr,new_val);
+		//i2c.write(&i2c, addr, new_val);
+}
+
+void ms_delay(uint32_t msec)
+{
+	
+	clock_t start_time= clock();
+	while( clock() < start_time + msec)
+	{
+		
+	}
+	  
 }
