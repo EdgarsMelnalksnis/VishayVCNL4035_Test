@@ -116,33 +116,20 @@ int main()
 	if (rc < 0)
 		err(errno, "Tried to set device address '0x%02x'", addr);
 
-	
-	
 	i2c_smbus_write_word_data(file,PS_CONF,BIT(14) | BIT(15) );
-
-i2c_smbus_write_word_data(file,PS_CONF_MS,BIT(0) | BIT(3));
-	
-			
-			
-			i2c_smbus_write_word_data(file,PS_CONF,(4 << 1) | (1 << 6) | (2 << 8) 
+	i2c_smbus_write_word_data(file,PS_CONF_MS,BIT(0) | BIT(3));
+	i2c_smbus_write_word_data(file,PS_CONF,(4 << 1) | (1 << 6) | (2 << 8) 
 			| BITH(2) | BITH(3) | BITH(6) );
-			
-			
-			i2c_smbus_write_word_data(file,PS_CONF,BIT(0) | BIT(3));
-	
-	
+	i2c_smbus_write_word_data(file,PS_CONF,BIT(0) | BIT(3));
 	i2c_smbus_write_word_data(file,ALS_CONF,(2 << 5));
-	
 	i2c_smbus_write_word_data(file,PS_THDL,0x1ff);
 	i2c_regset(file,PS_CONF_MS, BIT(2), 0);
 	i2c_regset(file,PS_CONF,0,BIT(0));
 	i2c_dump_reg(file);
-//i2c_regset(file,PS_CONF_MS, BIT(2), 0);
-i2c_dump_reg(file);
+	i2c_dump_reg(file);
 
 while(1)
 {
-	
 	printf("%d\n",i2c_smbus_read_word_data(file,PS1_DATA));
 	i2c_regset(file,PS_CONF_MS,BIT(2) ,0);
 	ms_delay(100);
